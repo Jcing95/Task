@@ -8,6 +8,8 @@ public class Task {
 
 	public static final int NUM_CORES = Runtime.getRuntime().availableProcessors() / 2;
 	public static int RESERVED_CORES = 0;
+	
+	private static final long START_MILLIS = System.currentTimeMillis();
 
 	protected String name;
 
@@ -293,7 +295,7 @@ public class Task {
 	}
 
 	public static long millis() {
-		return System.currentTimeMillis();
+		return System.currentTimeMillis() - START_MILLIS;
 	}
 
 	public static long nanos() {
