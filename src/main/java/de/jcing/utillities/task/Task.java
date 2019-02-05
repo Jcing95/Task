@@ -143,7 +143,8 @@ public class Task {
 			}
 			log.debug("starting...");
 			if (spread) {
-				new Thread(() -> {
+				new Thread(new Runnable() {
+				public void run(){
 					if (delay > 0) {
 						log.debug("delaying " + delay + "ms!");
 						sleep(delay);
@@ -209,9 +210,11 @@ public class Task {
 						r.run();
 					}
 					log.debug("finished!");
-				}).start();
+				}}).start();
 			} else {
-				new Thread(() -> {
+				new Thread(new Runnable(){
+					public void run(){
+				
 					long lastSec = System.currentTimeMillis();
 					long lastTick;
 					int ticks = 0;
@@ -267,7 +270,7 @@ public class Task {
 						r.run();
 					}
 					log.debug("finished!");
-				}).start();
+				}}).start();
 			}
 		}
 		return this;
@@ -294,8 +297,8 @@ public class Task {
 		return new TaskFactory();
 	}
 
-	public static long millis() {
-		return System.currentTimeMillis() - START_MILLIS;
+	public static int millis() {
+		return (int)(System.currentTimeMillis() - START_MILLIS);
 	}
 
 	public static long nanos() {
