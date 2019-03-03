@@ -11,7 +11,7 @@ public class TaskFactory {
 	
 	public TaskFactory() {
 		t = new Task();
-		runnables = new LinkedList<>();
+		runnables = new LinkedList<Runnable>();
 	}
 	
 	/***

@@ -4,7 +4,7 @@ import java.util.HashSet;
 
 public class Topic {
 	
-	private static HashSet<Topic> topics = new HashSet<>();
+	private static HashSet<Topic> topics = new HashSet<Topic>();
 	
 	private static Topic global = new Topic("global");
 	
@@ -15,7 +15,7 @@ public class Topic {
 	private double salt;
 	
 	public Topic(String name) {
-		tasks = new HashSet<>();
+		tasks = new HashSet<Task>();
 		this.name = name;
 		salt = Math.random();
 		topics.add(this);
