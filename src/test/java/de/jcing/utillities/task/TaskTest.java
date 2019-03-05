@@ -38,7 +38,7 @@ public class TaskTest {
 			}
 		});
 		
-		Task t = tf.name("runn").preExecute(preExec).postExecute().start();
+		Task t = tf.name("runn").preExecute(preExec).postExecute(postExec).start();
 		t.spread().multiExecution(false).start();
 		
 	}
