@@ -2,6 +2,7 @@ package de.jcing.utillities.task;
 
 import java.util.LinkedList;
 
+@Deprecated
 public class TaskFactory {
 	
 	LinkedList<Runnable> runnables;

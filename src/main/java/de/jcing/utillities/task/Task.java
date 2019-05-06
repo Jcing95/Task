@@ -1,5 +1,7 @@
 package de.jcing.utillities.task;
 
+import java.util.Iterator;
+
 import de.jcing.utillities.log.Log;
 
 public class Task {
@@ -14,12 +16,11 @@ public class Task {
 	protected String name;
 	
 	protected final Context context;
+	protected Context[] subContexts;
 
-	protected Runnable[] runnables;
 	protected Runnable[] preExecute;
 	protected Runnable[] postExecute;
 
-	protected Runnable[][] spreaded;
 	protected boolean spread = false;
 	protected int threads;
 
@@ -39,11 +40,10 @@ public class Task {
 	protected long delay;
 
 	public Task(Runnable... runnables) {
-		this.runnables = runnables;
+		this.context = new Context();
 		preExecute = new Runnable[0];
 		postExecute = new Runnable[0];
-		spreaded = new Runnable[0][0];
-		this.context = new Context(this);
+		context.loop(runnables);
 	}
 
 	public Task name(String name) {
@@ -90,6 +90,17 @@ public class Task {
 		this.postExecute = postExecute;
 		return this;
 	}
+	
+	
+	public Task preLoop(Runnable...runnables) {
+		context.preLoop(runnables);
+		return this;
+	}
+	
+	public Task postLoop(Runnable...runnables) {
+		context.postLoop(runnables);
+		return this;
+	}
 
 	public Task delay(long delay) {
 		this.delay = delay;
@@ -129,13 +140,21 @@ public class Task {
 	public Task spread(int threads) {
 		this.spread = true;
 		this.threads = threads;
-		int runCount = runnables.length / threads;
-		int over = runnables.length % threads;
-		spreaded = new Runnable[threads][];
-		for (int i = 0, r = 0; i < threads; i++) {
-			spreaded[i] = new Runnable[runCount + (Integer.max(over--, 0))];
-			for (int t = 0; t < spreaded[i].length; t++) {
-				spreaded[i][t] = runnables[r++];
+		subContexts = new Context[threads];
+		subContexts[0] = context;
+		int[] lengths = new int[threads];
+		int over = context.loopSize() % threads;
+		int runCount = context.loopSize() / threads;
+
+		for (int i = 1; i < subContexts.length; i++) {
+			subContexts[i] = new Context();
+			lengths[i] = runCount + (Integer.max(over--, 0));
+		}
+		
+		Iterator<Runnable> it = context.getLoopIterator();
+		for (int i = 0; i < threads; i++) {
+			for (int t = 0; t < lengths[i]; t++) {
+				subContexts[i].run(it.next());
 			}
 		}
 		return this;
@@ -181,14 +200,13 @@ public class Task {
 	private void runSerial() {
 		new Thread(new Runnable() {
 			public void run() {
+				delayAndPretasks();
 
 				long lastSec = System.currentTimeMillis();
 				long lastTick;
 				int ticks = 0;
 				double difft = 0;
 				
-				delayAndPretasks();
-
 				if (repeating)
 					log.debug("starting loop...");
 				else
@@ -197,9 +215,8 @@ public class Task {
 				do {
 					lastTick = System.currentTimeMillis();
 
-					for (Runnable r : runnables)
-						r.run();
 					context.exec();
+					
 					if (repeating) {
 						if (System.currentTimeMillis() - lastSec >= 1000) {
 							tps = ticks;
@@ -253,8 +270,7 @@ public class Task {
 							do {
 								lastTick = System.currentTimeMillis();
 
-								for (Runnable r : spreaded[index])
-									r.run();
+								subContexts[index].exec();
 								
 								if (repeating) {
 									if (index == 0 && System.currentTimeMillis() - lastSec >= 1000) {
@@ -312,9 +328,9 @@ public class Task {
 		return finished;
 	}
 
-	public Context getContext() throws Exception {
+	public Context getContext() throws RuntimeException {
 		if(spread)
-			throw new Exception("Spreaded task has no unique context!");
+			throw new RuntimeException("Spreaded task has no unique context!");
 		else return context;
 	}
 	
@@ -323,10 +339,6 @@ public class Task {
 	}
 
 	// Utility functions
-
-	public static TaskFactory getFactory() {
-		return new TaskFactory();
-	}
 
 	public static int millis() {
 		return (int) (System.currentTimeMillis() - START_MILLIS);
