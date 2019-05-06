@@ -3,15 +3,17 @@ package de.jcing.utillities.task;
 import de.jcing.utillities.log.Log;
 
 public class Task {
-	
+
 	Log log = new Log(Task.class).mute(false);
 
 	public static final int NUM_CORES = Runtime.getRuntime().availableProcessors() / 2;
 	public static int RESERVED_CORES = 0;
-	
+
 	private static final long START_MILLIS = System.currentTimeMillis();
 
 	protected String name;
+	
+	protected final Context context;
 
 	protected Runnable[] runnables;
 	protected Runnable[] preExecute;
@@ -31,17 +33,17 @@ public class Task {
 	protected boolean inTopic = false;
 
 	protected boolean finished = false;
-	
-	protected boolean multiExec = false;
-	
-	protected long delay;
 
+	protected boolean multiExec = false;
+
+	protected long delay;
 
 	public Task(Runnable... runnables) {
 		this.runnables = runnables;
 		preExecute = new Runnable[0];
 		postExecute = new Runnable[0];
 		spreaded = new Runnable[0][0];
+		this.context = new Context(this);
 	}
 
 	public Task name(String name) {
@@ -49,6 +51,7 @@ public class Task {
 		log.appendName(name);
 		return this;
 	}
+	
 
 	/***
 	 * loops this <b>Task</b> until <i>stop()</i> is called.
@@ -60,9 +63,9 @@ public class Task {
 		waitTime = delay;
 		return this;
 	}
-	
+
 	/***
-	 *  Adds this <b>Task</b> to given Topic 
+	 * Adds this <b>Task</b> to given Topic
 	 */
 	public Task inTopic(Topic t) {
 		t.addTask(this);
@@ -92,22 +95,25 @@ public class Task {
 		this.delay = delay;
 		return this;
 	}
-	
-	
+
 	/***
-	 * When Multi Execution is <b>enabled</b> This task can be executed multiple times in parallel.
-	 * This spawns one or more threads every time when <b>start()</b> is called!</br></br>
+	 * When Multi Execution is <b>enabled</b> This task can be executed multiple
+	 * times in parallel. This spawns one or more threads every time when
+	 * <b>start()</b> is called!</br>
+	 * </br>
 	 * 
-	 * When Multi Execution is <b>disabled</b> This task can be executed only once at a time!
-	 * when <b>start()</b> is called it will return, if this task is <i>already running</i> and start normally <i>otherwise</i>!
+	 * When Multi Execution is <b>disabled</b> This task can be executed only once
+	 * at a time! when <b>start()</b> is called it will return, if this task is
+	 * <i>already running</i> and start normally <i>otherwise</i>!
 	 */
 	public Task multiExecution(boolean multiExec) {
 		this.multiExec = multiExec;
 		return this;
 	}
-	
+
 	/***
-	 * Distributes the runnables of this Task into <b>NUM_CORES</b> - <b>RESERVED_CORES</b> threads.
+	 * Distributes the runnables of this Task into <b>NUM_CORES</b> -
+	 * <b>RESERVED_CORES</b> threads.
 	 * 
 	 */
 	public Task spread() {
@@ -136,7 +142,7 @@ public class Task {
 	}
 
 	public Task start() {
-		if(!running || multiExec) {
+		if (!running || multiExec) {
 			running = true;
 			if (!inTopic) {
 				Topic.addGlobal(this);
@@ -150,128 +156,133 @@ public class Task {
 		}
 		return this;
 	}
-	
-	private void runSerial() {
-		new Thread(new Runnable(){
-			public void run(){
-		
-			long lastSec = System.currentTimeMillis();
-			long lastTick;
-			int ticks = 0;
-			double difft = 0;
-			if (delay > 0) {
-				log.debug("delaying " + delay + "ms!");
-				sleep(delay);
-			}
-			if (preExecute.length > 0)
-				log.debug("executing pretask(s)...");
-			for (Runnable r : preExecute) {
-				r.run();
-			}
-			if (repeating)
-				log.debug("starting loop...");
-			else
-				log.debug("executing task(s)...");
-			
-			do {
-				lastTick = System.currentTimeMillis();
 
-				for (Runnable r : runnables)
-					r.run();
-
-				if (repeating) {
-					if (System.currentTimeMillis() - lastSec >= 1000) {
-						tps = ticks;
-						ticks = 0;
-						lastSec = System.currentTimeMillis();
-					}
-
-					difft -= (int) difft;
-					difft += waitTime - (System.currentTimeMillis() - lastTick);
-
-					if (difft > 0)
-						sleep((long) (difft));
-
-					while (paused && running) {
-						ticks = 0;
-						tps = 0;
-						sleep((long) waitTime);
-					}
-				} else {
-					running = false;
-				}
-				ticks++;
-			} while (repeating && running);
-			
-			if (repeating)
-				log.debug("finished loop!");
-			finished = true;
-			if (preExecute.length > 0)
-				log.debug("executing posttask(s)...");
-			for (Runnable r : postExecute) {
-				r.run();
-			}
-			log.debug("finished!");
-		}}).start();
+	private void delayAndPretasks() {
+		if (delay > 0) {
+			log.debug("delaying " + delay + "ms!");
+			sleep(delay);
+		}
+		if (preExecute.length > 0)
+			log.debug("executing pretask(s)...");
+		for (Runnable r : preExecute) {
+			r.run();
+		}
 	}
 	
+	private void postExecAndFinish() {
+		if (preExecute.length > 0)
+			log.debug("executing posttask(s)...");
+		for (Runnable r : postExecute) {
+			r.run();
+		}
+		log.debug("finished!");
+	}
+
+	private void runSerial() {
+		new Thread(new Runnable() {
+			public void run() {
+
+				long lastSec = System.currentTimeMillis();
+				long lastTick;
+				int ticks = 0;
+				double difft = 0;
+				
+				delayAndPretasks();
+
+				if (repeating)
+					log.debug("starting loop...");
+				else
+					log.debug("executing task(s)...");
+
+				do {
+					lastTick = System.currentTimeMillis();
+
+					for (Runnable r : runnables)
+						r.run();
+					context.exec();
+					if (repeating) {
+						if (System.currentTimeMillis() - lastSec >= 1000) {
+							tps = ticks;
+							ticks = 0;
+							lastSec = System.currentTimeMillis();
+						}
+
+						difft -= (int) difft;
+						difft += waitTime - (System.currentTimeMillis() - lastTick);
+
+						if (difft > 0)
+							sleep((long) (difft));
+
+						while (paused && running) {
+							ticks = 0;
+							tps = 0;
+							sleep((long) waitTime);
+						}
+					} else {
+						running = false;
+					}
+					ticks++;
+				} while (repeating && running);
+
+				if (repeating)
+					log.debug("finished loop!");
+				finished = true;
+				postExecAndFinish();
+			}
+		}).start();
+	}
+
 	private void runParallel() {
 		new Thread(new Runnable() {
-			public void run(){
-				if (delay > 0) {
-					log.debug("delaying " + delay + "ms!");
-					sleep(delay);
-				}
-				if (preExecute.length > 0)
-					log.debug("executing pretask(s)...");
-				for (Runnable r : preExecute) {
-					r.run();
-				}
+			public void run() {
+
+				delayAndPretasks();
 				final boolean fin[] = new boolean[threads];
 
 				log.debug("starting spreaded " + (repeating ? "loop!" : "task!"));
 				for (int i = 0; i < threads; i++) {
 					final int index = i;
-					new Thread( new Runnable() {
-						
-					@Override
-					public void run() {
-						long lastSec = System.currentTimeMillis();
-						long lastTick;
-						double difft = 0;
-						int ticks = 0;
-						do {
-							lastTick = System.currentTimeMillis();
-							
-							for (Runnable r : spreaded[index]) 
-								r.run();
-							
-							if (repeating) {
-								if (index == 0 && System.currentTimeMillis() - lastSec >= 1000) {
-									tps = ticks;
-									ticks = 0;
-									lastSec = System.currentTimeMillis();
+					new Thread(new Runnable() {
+
+						@Override
+						public void run() {
+							long lastSec = System.currentTimeMillis();
+							long lastTick;
+							double difft = 0;
+							int ticks = 0;
+							do {
+								lastTick = System.currentTimeMillis();
+
+								for (Runnable r : spreaded[index])
+									r.run();
+								
+								if (repeating) {
+									if (index == 0 && System.currentTimeMillis() - lastSec >= 1000) {
+										tps = ticks;
+										ticks = 0;
+										lastSec = System.currentTimeMillis();
+									}
+
+									difft += waitTime - (System.currentTimeMillis() - lastTick);
+
+									if (difft > 0)
+										sleep((long) (difft));
+
+									difft -= (int) difft;
+
+									while (paused && running) {
+										ticks = 0;
+										tps = 0;
+										sleep((long) waitTime);
+									}
+								} else {
+									running = false;
 								}
-
-								difft += waitTime - (System.currentTimeMillis() - lastTick);
-
-								if (difft > 0)
-									sleep((long) (difft));
-
-								difft -= (int) difft;
-
-								while (paused && running) {
-									ticks = 0;
-									tps = 0;
-									sleep((long) waitTime);
-								}
-							} else {
-								running = false;
-							}
-							ticks++;
-						} while (repeating && running);
-						fin[index] = true;
-					}}).start();
+								ticks++;
+							} while (repeating && running);
+							fin[index] = true;
+						}
+					}).start();
 				}
 				while (!finished) {
 					boolean finish = true;
@@ -280,13 +291,9 @@ public class Task {
 					finished = finish;
 					sleep(100);
 				}
-				if (preExecute.length > 0)
-					log.debug("executing posttask(s)...");
-				for (Runnable r : postExecute) {
-					r.run();
-				}
-				log.debug("finished!");
-			}}).start();
+				postExecAndFinish();
+			}
+		}).start();
 	}
 
 	public void stop() {
@@ -304,19 +311,25 @@ public class Task {
 	public boolean isFinished() {
 		return finished;
 	}
+
+	public Context getContext() throws Exception {
+		if(spread)
+			throw new Exception("Spreaded task has no unique context!");
+		else return context;
+	}
 	
 	public void enableLogging(boolean enabled) {
 		log.mute(enabled);
 	}
 
 	// Utility functions
-	
+
 	public static TaskFactory getFactory() {
 		return new TaskFactory();
 	}
 
 	public static int millis() {
-		return (int)(System.currentTimeMillis() - START_MILLIS);
+		return (int) (System.currentTimeMillis() - START_MILLIS);
 	}
 
 	public static long nanos() {
