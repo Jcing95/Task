@@ -102,6 +102,11 @@ public class Task {
 		return this;
 	}
 
+	/***
+	 * delays the execution after <b>start()</b> is called.
+	 * @param delay by milliseconds
+	 * 
+	 */
 	public Task delay(long delay) {
 		this.delay = delay;
 		return this;
