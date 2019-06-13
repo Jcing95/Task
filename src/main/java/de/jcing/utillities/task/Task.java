@@ -39,10 +39,15 @@ public class Task {
 
 	protected long delay;
 
-	public Task(Runnable... runnables) {
+	
+	public Task() {
 		this.context = new Context();
 		preExecute = new Runnable[0];
 		postExecute = new Runnable[0];
+	}
+
+	public Task(Runnable... runnables) {
+		this();
 		context.loop(runnables);
 	}
 
@@ -75,7 +80,7 @@ public class Task {
 
 	/***
 	 * 
-	 * @param preExecute runnables to be executed <b>once</b> before starting.
+	 * @param preExecute Runnables to be executed <b>once</b> before starting.
 	 */
 	public Task preExecute(Runnable... preExecute) {
 		this.preExecute = preExecute;
@@ -84,7 +89,6 @@ public class Task {
 
 	/***
 	 * 
-	 * @param postExecute runnables to be executed <b>once</b> after finishing.
 	 */
 	public Task postExecute(Runnable... postExecute) {
 		this.postExecute = postExecute;
@@ -92,11 +96,19 @@ public class Task {
 	}
 	
 	
+	/***
+	 * @param runnables to be executed <b>every time</b> before the this Task is executed.
+	 *
+	 */
 	public Task preLoop(Runnable...runnables) {
 		context.preLoop(runnables);
 		return this;
 	}
 	
+	/***
+	 * @param r to be executed <b>every time</b> after the this Task is executed.
+	 *
+	 */
 	public Task postLoop(Runnable...runnables) {
 		context.postLoop(runnables);
 		return this;
@@ -113,6 +125,7 @@ public class Task {
 	}
 
 	/***
+	 * 
 	 * When Multi Execution is <b>enabled</b> This task can be executed multiple
 	 * times in parallel. This spawns one or more threads every time when
 	 * <b>start()</b> is called!</br>
@@ -165,11 +178,15 @@ public class Task {
 		return this;
 	}
 
+	/**
+	 * Starts the execution of this thread
+	 * 
+	 */
 	public Task start() {
 		if (!running || multiExec) {
 			running = true;
 			if (!inTopic) {
-				Topic.addGlobal(this);
+				Topic.addDefault(this);
 			}
 			log.debug("starting...");
 			if (spread) {
@@ -179,6 +196,29 @@ public class Task {
 			}
 		}
 		return this;
+	}
+	
+	/**
+	 * Pauses this Task. After the current execution it will wait until pause is set to false.
+	 * 
+	 */
+	public void pause(boolean pause) {
+		paused = pause;
+	}
+
+	/**
+	 * Terminates this Task after the current execution.
+	 */
+	public void stop() {
+		running = false;
+	}
+
+	/*
+	 * Verbose all logging by this Task.
+	 * Logging in the Runnables added to it wont be muted.
+	 */
+	public void enableLogging(boolean enabled) {
+		log.mute(enabled);
 	}
 
 	private void delayAndPretasks() {
@@ -316,47 +356,66 @@ public class Task {
 			}
 		}).start();
 	}
-
-	public void stop() {
-		running = false;
-	}
-
-	public void pause(boolean pause) {
-		paused = pause;
-	}
-
+	
+	
+	// Getters
+	
+	/**
+	 * 
+	 * @return ticks per second of this task
+	 */
 	public int getTps() {
 		return tps;
 	}
-
-	public boolean isFinished() {
+	
+	/***
+	 * 
+	 * @return the name of this task.
+	 */
+	public String getName() {
+		return name;
+	}
+	
+	/**
+	 * 
+	 * @return if this task is terminated
+	 */
+	public boolean isTerminated() {
 		return finished;
 	}
 
+	/**
+	 * Returns the context of this Task.
+	 * Everything executed in this context will be running in the same thread.
+	 * 
+	 * @throws RuntimeException when this thread is spreaded as it has no single Thread in this case.
+	 */
 	public Context getContext() throws RuntimeException {
 		if(spread)
 			throw new RuntimeException("Spreaded task has no unique context!");
 		else return context;
 	}
 	
-	public void enableLogging(boolean enabled) {
-		log.mute(enabled);
-	}
-
+	
 	// Utility functions
 
+	/**
+	 * @return the time since the program started in milliseconds.
+	 */
 	public static int millis() {
 		return (int) (System.currentTimeMillis() - START_MILLIS);
 	}
-
-	public static long nanos() {
-		return System.nanoTime();
-	}
-
+	
+	/**
+	 * @return the time of given seconds in milliseconds.
+	 */
 	public static long perSecond(double perSecond) {
 		return (long) (1000.0 / perSecond);
 	}
 
+	/**
+	 * @return the time of given Minutes in milliseconds.
+	 */
 	public static long perMinute(double perMinute) {
 		return (long) (60000.0 / perMinute);
 	}

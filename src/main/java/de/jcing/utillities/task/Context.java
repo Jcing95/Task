@@ -60,6 +60,7 @@ public class Context {
 			for (Runnable r : toLoop) {
 				r.run();
 			}
+			
 			for (Runnable r : postLoop) {
 				r.run();
 			}
