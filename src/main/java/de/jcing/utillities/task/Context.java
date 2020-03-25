@@ -1,23 +1,23 @@
 package de.jcing.utillities.task;
 
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.ArrayList;
 
 public class Context {
 
-	private LinkedList<Runnable> toRun;
-	private LinkedList<Runnable> toLoop;
-	private LinkedList<Runnable> preLoop;
-	private LinkedList<Runnable> postLoop;
+	private ArrayList<Runnable> toRun;
+	private ArrayList<Runnable> toLoop;
+	private ArrayList<Runnable> preLoop;
+	private ArrayList<Runnable> postLoop;
 	
 
 	private final Object BLOCKER = new Object();
 
 	protected Context() {
-		toRun = new LinkedList<Runnable>();
-		toLoop = new LinkedList<Runnable>();
-		preLoop = new LinkedList<Runnable>();
-		postLoop = new LinkedList<Runnable>();
+		toRun = new ArrayList<Runnable>();
+		toLoop = new ArrayList<Runnable>();
+		preLoop = new ArrayList<Runnable>();
+		postLoop = new ArrayList<Runnable>();
 	}
 
 	public void run(Runnable... run) {
@@ -51,7 +51,7 @@ public class Context {
 	protected void exec() {
 		synchronized (BLOCKER) {
 			while (!toRun.isEmpty()) {
-				toRun.removeFirst().run();
+				toRun.remove(0).run();
 			}
 			
 			for (Runnable r : preLoop) {
