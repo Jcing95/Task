@@ -3,18 +3,18 @@ package de.jcing.utillities.task;
 import java.util.Iterator;
 
 import de.jcing.utillities.log.Log;
+import de.jcing.utillities.log.Log.Logger;
 
 public class Task {
 
-	Log log = new Log(Task.class).mute(false);
-
+	Logger log = Log.getInstance();
 	public static final int NUM_CORES = Runtime.getRuntime().availableProcessors() / 2;
 	public static int RESERVED_CORES = 0;
 
 	private static final long START_MILLIS = System.currentTimeMillis();
 
 	protected String name;
-	
+
 	protected final Context context;
 	protected Context[] subContexts;
 
@@ -39,7 +39,6 @@ public class Task {
 
 	protected long delay;
 
-	
 	public Task() {
 		this.context = new Context();
 		preExecute = new Runnable[0];
@@ -53,10 +52,9 @@ public class Task {
 
 	public Task name(String name) {
 		this.name = name;
-		log.appendName(name);
+		log.setSuffix("|" + name);
 		return this;
 	}
-	
 
 	/***
 	 * loops this <b>Task</b> until <i>stop()</i> is called.
@@ -94,28 +92,29 @@ public class Task {
 		this.postExecute = postExecute;
 		return this;
 	}
-	
-	
+
 	/***
-	 * @param runnables to be executed <b>every time</b> before the this Task is executed.
+	 * @param runnables to be executed <b>every time</b> before the this Task is
+	 *                  executed.
 	 *
 	 */
-	public Task preLoop(Runnable...runnables) {
+	public Task preLoop(Runnable... runnables) {
 		context.preLoop(runnables);
 		return this;
 	}
-	
+
 	/***
 	 * @param r to be executed <b>every time</b> after the this Task is executed.
 	 *
 	 */
-	public Task postLoop(Runnable...runnables) {
+	public Task postLoop(Runnable... runnables) {
 		context.postLoop(runnables);
 		return this;
 	}
 
 	/***
 	 * delays the execution after <b>start()</b> is called.
+	 * 
 	 * @param delay by milliseconds
 	 * 
 	 */
@@ -168,7 +167,7 @@ public class Task {
 			subContexts[i] = new Context();
 			lengths[i] = runCount + (Integer.max(over--, 0));
 		}
-		
+
 		Iterator<Runnable> it = context.getLoopIterator();
 		for (int i = 0; i < threads; i++) {
 			for (int t = 0; t < lengths[i]; t++) {
@@ -197,9 +196,10 @@ public class Task {
 		}
 		return this;
 	}
-	
+
 	/**
-	 * Pauses this Task. After the current execution it will wait until pause is set to false.
+	 * Pauses this Task. After the current execution it will wait until pause is set
+	 * to false.
 	 * 
 	 */
 	public void pause(boolean pause) {
@@ -215,10 +215,10 @@ public class Task {
 
 	/*
 	 * Verbose all logging by this Task.
-	 * Logging in the Runnables added to it wont be muted.
+	 * logging in the Runnables added to it wont be muted.
 	 */
-	public void enableLogging(boolean enabled) {
-		log.mute(enabled);
+	public void enablelogging(boolean enabled) {
+		log.setLevel(Log.LEVEL.disable);
 	}
 
 	private void delayAndPretasks() {
@@ -232,7 +232,7 @@ public class Task {
 			r.run();
 		}
 	}
-	
+
 	private void postExecAndFinish() {
 		if (preExecute.length > 0)
 			log.debug("executing posttask(s)...");
@@ -251,7 +251,7 @@ public class Task {
 				long lastTick;
 				int ticks = 0;
 				double difft = 0;
-				
+
 				if (repeating)
 					log.debug("starting loop...");
 				else
@@ -261,7 +261,7 @@ public class Task {
 					lastTick = System.currentTimeMillis();
 
 					context.exec();
-					
+
 					if (repeating) {
 						if (System.currentTimeMillis() - lastSec >= 1000) {
 							tps = ticks;
@@ -316,7 +316,7 @@ public class Task {
 								lastTick = System.currentTimeMillis();
 
 								subContexts[index].exec();
-								
+
 								if (repeating) {
 									if (index == 0 && System.currentTimeMillis() - lastSec >= 1000) {
 										tps = ticks;
@@ -356,10 +356,9 @@ public class Task {
 			}
 		}).start();
 	}
-	
-	
+
 	// Getters
-	
+
 	/**
 	 * 
 	 * @return ticks per second of this task
@@ -367,7 +366,7 @@ public class Task {
 	public int getTps() {
 		return tps;
 	}
-	
+
 	/***
 	 * 
 	 * @return the name of this task.
@@ -375,7 +374,7 @@ public class Task {
 	public String getName() {
 		return name;
 	}
-	
+
 	/**
 	 * 
 	 * @return if this task is terminated
@@ -385,18 +384,19 @@ public class Task {
 	}
 
 	/**
-	 * Returns the context of this Task.
-	 * Everything executed in this context will be running in the same thread.
+	 * Returns the context of this Task. Everything executed in this context will be
+	 * running in the same thread.
 	 * 
-	 * @throws RuntimeException when this thread is spreaded as it has no single Thread in this case.
+	 * @throws RuntimeException when this thread is spreaded as it has no single
+	 *                          Thread in this case.
 	 */
 	public Context getContext() throws RuntimeException {
-		if(spread)
+		if (spread)
 			throw new RuntimeException("Spreaded task has no unique context!");
-		else return context;
+		else
+			return context;
 	}
-	
-	
+
 	// Utility functions
 
 	/**
@@ -405,7 +405,7 @@ public class Task {
 	public static int millis() {
 		return (int) (System.currentTimeMillis() - START_MILLIS);
 	}
-	
+
 	/**
 	 * @return the time of given seconds in milliseconds.
 	 */
