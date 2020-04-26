@@ -3,7 +3,7 @@
   <parent>
     <groupId>de.jcing.utilities</groupId>
     <artifactId>Utilities</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
   </parent>
   <artifactId>Task</artifactId>
   
@@ -16,7 +16,7 @@
   	<dependency>
 	  <groupId>de.jcing.utilities</groupId>
 	  <artifactId>Log</artifactId>
-	  <version>0.0.1</version>
+	  <version>0.0.2</version>
  	 </dependency>
   </dependencies>
   
