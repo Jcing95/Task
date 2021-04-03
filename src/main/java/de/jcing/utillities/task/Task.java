@@ -2,18 +2,15 @@ package de.jcing.utillities.task;
 
 import java.util.Iterator;
 
-import de.jcing.utillities.log.Log;
-import de.jcing.utillities.log.Log.Logger;
-
 public class Task {
 
-	Logger log = Log.getInstance();
+	Logger log = new Logger() {};
 	public static final int NUM_CORES = Runtime.getRuntime().availableProcessors() / 2;
 	public static int RESERVED_CORES = 0;
 
 	private static final long START_MILLIS = System.currentTimeMillis();
 
-	protected String name;
+	protected String name = "";
 
 	protected final Context context;
 	protected Context[] subContexts;
@@ -52,7 +49,6 @@ public class Task {
 
 	public Task name(String name) {
 		this.name = name;
-		log.setSuffix("|" + name);
 		return this;
 	}
 
@@ -187,7 +183,7 @@ public class Task {
 			if (!inTopic) {
 				Topic.addDefault(this);
 			}
-			log.debug("starting...");
+			log.debug(name += ": starting...");
 			if (spread) {
 				runParallel();
 			} else {
@@ -217,17 +213,33 @@ public class Task {
 	 * Verbose all logging by this Task.
 	 * logging in the Runnables added to it wont be muted.
 	 */
-	public void enablelogging(boolean enabled) {
-		log.setLevel(Log.LEVEL.disable);
+	public void enablelogging(Logger logger) {
+		log = logger;
+	}
+	
+	/*
+	 * Verbose all logging by this Task via system.out.
+	 * logging in the Runnables added to it wont be muted.
+	 */
+	public void enablelogging(boolean log) {
+		if(log)
+			this.log = new Logger() {
+				@Override
+				public void debug(String s) {
+					System.out.println(s);
+				}
+			};
+		else
+			this.log = new Logger() {};
 	}
 
 	private void delayAndPretasks() {
 		if (delay > 0) {
-			log.debug("delaying " + delay + "ms!");
+			log.debug(name += ": delaying " + delay + "ms!");
 			sleep(delay);
 		}
 		if (preExecute.length > 0)
-			log.debug("executing pretask(s)...");
+			log.debug(name += ": executing pretask(s)...");
 		for (Runnable r : preExecute) {
 			r.run();
 		}
@@ -235,11 +247,11 @@ public class Task {
 
 	private void postExecAndFinish() {
 		if (preExecute.length > 0)
-			log.debug("executing posttask(s)...");
+			log.debug(name += ": executing posttask(s)...");
 		for (Runnable r : postExecute) {
 			r.run();
 		}
-		log.debug("finished!");
+		log.debug(name += ": finished!");
 	}
 
 	private void runSerial() {
@@ -253,9 +265,9 @@ public class Task {
 				double difft = 0;
 
 				if (repeating)
-					log.debug("starting loop...");
+					log.debug(name += ": starting loop...");
 				else
-					log.debug("executing task(s)...");
+					log.debug(name += ": executing task(s)...");
 
 				do {
 					lastTick = System.currentTimeMillis();
@@ -287,7 +299,7 @@ public class Task {
 				} while (repeating && running);
 
 				if (repeating)
-					log.debug("finished loop!");
+					log.debug(name += ": finished loop!");
 				finished = true;
 				postExecAndFinish();
 			}
@@ -301,7 +313,7 @@ public class Task {
 				delayAndPretasks();
 				final boolean fin[] = new boolean[threads];
 
-				log.debug("starting spreaded " + (repeating ? "loop!" : "task!"));
+				log.debug(name += ": starting spreaded " + (repeating ? "loop!" : "task!"));
 				for (int i = 0; i < threads; i++) {
 					final int index = i;
 					new Thread(new Runnable() {
@@ -432,4 +444,10 @@ public class Task {
 		}
 	}
 
+	
+	private interface Logger {
+		default public void debug(String s) {
+//			System.out.println(s);
+		}
+	}
 }
